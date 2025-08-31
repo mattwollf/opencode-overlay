@@ -2,9 +2,9 @@ name: Test Ebuilds
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
@@ -75,7 +75,11 @@ jobs:
       run: |
         cd /var/db/repos/opencode-overlay/dev-util/opencode
         # Use ebuild directly in CI to avoid repo config issues
-        ebuild opencode-*.ebuild manifest || exit 1
+        # Find the newest non-live ebuild for manifest generation
+        NEWEST_EBUILD=$(ls opencode-*.ebuild | grep -v 9999 | sort -V | tail -n1)
+        if [ -n "$NEWEST_EBUILD" ]; then
+          ebuild "$NEWEST_EBUILD" manifest || exit 1
+        fi
         pkgcheck scan || true
         
     - name: Test manifest generation
@@ -83,7 +87,14 @@ jobs:
         cd /var/db/repos/opencode-overlay/dev-util/opencode
         rm -f Manifest
         # Use ebuild directly in CI environment
-        ebuild opencode-*.ebuild manifest
+        # Find the newest non-live ebuild for manifest generation
+        NEWEST_EBUILD=$(ls opencode-*.ebuild | grep -v 9999 | sort -V | tail -n1)
+        if [ -n "$NEWEST_EBUILD" ]; then
+          ebuild "$NEWEST_EBUILD" manifest
+        else
+          echo "No non-live ebuilds found for manifest generation"
+          exit 1
+        fi
         [ -f Manifest ] || exit 1
 
   build-test:
