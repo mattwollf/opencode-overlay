@@ -109,9 +109,9 @@ generate_manifest() {
     
     cd "$PACKAGE_DIR" || die "Cannot change to package directory"
     
-    # Use repoman or ebuild to generate manifest
-    if command -v repoman >/dev/null 2>&1; then
-        repoman manifest || warn "repoman manifest failed, trying alternative method"
+    # Use modern pkgdev, fallback to ebuild, legacy repoman
+    if command -v pkgdev >/dev/null 2>&1; then
+        pkgdev manifest || warn "pkgdev manifest failed, trying alternative method"
     elif command -v ebuild >/dev/null 2>&1; then
         # Find the newest ebuild file
         local newest_ebuild
@@ -120,8 +120,11 @@ generate_manifest() {
         if [[ -n "$newest_ebuild" ]]; then
             ebuild "$newest_ebuild" manifest || warn "ebuild manifest failed"
         fi
+    elif command -v repoman >/dev/null 2>&1; then
+        # Legacy support for older systems
+        repoman manifest || warn "repoman manifest failed"
     else
-        warn "No manifest generation tool found (repoman or ebuild)"
+        warn "No manifest generation tool found (pkgdev, ebuild, or repoman)"
     fi
 }
 

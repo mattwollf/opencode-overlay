@@ -25,7 +25,7 @@ jobs:
     - name: Install development tools
       run: |
         emerge -nq dev-util/pkgcheck
-        emerge -nq app-portage/repoman
+        emerge -nq dev-util/pkgdev
         emerge -nq dev-vcs/git
         
     - name: Setup overlay
@@ -56,17 +56,17 @@ jobs:
         cd /var/db/repos/opencode-overlay
         pkgcheck scan --exit dev-util/opencode || true
         
-    - name: Run repoman checks
+    - name: Run pkgcheck QA checks
       run: |
         cd /var/db/repos/opencode-overlay/dev-util/opencode
-        repoman manifest || exit 1
-        repoman scan || true
+        pkgdev manifest || exit 1
+        pkgcheck scan || true
         
     - name: Test manifest generation
       run: |
         cd /var/db/repos/opencode-overlay/dev-util/opencode
         rm -f Manifest
-        repoman manifest
+        pkgdev manifest || ebuild opencode-*.ebuild manifest
         [ -f Manifest ] || exit 1
 
   build-test:

@@ -43,7 +43,7 @@ check_root() {
 
 # Check dependencies
 check_deps() {
-    local deps=(emerge ebuild repoman)
+    local deps=(emerge ebuild)
     local missing=()
     
     for dep in "${deps[@]}"; do
@@ -54,6 +54,11 @@ check_deps() {
     
     if [[ ${#missing[@]} -gt 0 ]]; then
         die "Missing dependencies: ${missing[*]}"
+    fi
+    
+    # Check for QA tools (preferred modern tools first)
+    if ! command -v pkgdev >/dev/null 2>&1 && ! command -v pkgcheck >/dev/null 2>&1 && ! command -v repoman >/dev/null 2>&1; then
+        warn "No QA tools found (pkgdev, pkgcheck, or repoman). Some tests may be skipped."
     fi
 }
 
@@ -125,10 +130,13 @@ generate_manifest() {
     
     cd "$PACKAGE_DIR" || die "Cannot access package directory"
     
-    if command -v repoman >/dev/null 2>&1; then
+    # Try modern tools first, then fallback to older methods
+    if command -v pkgdev >/dev/null 2>&1; then
+        pkgdev manifest || die "Manifest generation failed"
+    elif command -v repoman >/dev/null 2>&1; then
         repoman manifest || die "Manifest generation failed"
     else
-        warn "repoman not found, trying alternative method"
+        warn "pkgdev/repoman not found, trying ebuild method"
         
         # Try with newest non-live ebuild
         local newest_ebuild
@@ -180,38 +188,46 @@ test_compile() {
     fi
 }
 
-# Run repoman checks
-run_repoman() {
-    log "Running repoman quality checks..."
+# Run QA checks
+run_qa_checks() {
+    log "Running quality assurance checks..."
     
     cd "$PACKAGE_DIR" || die "Cannot access package directory"
     
-    if ! command -v repoman >/dev/null 2>&1; then
-        warn "repoman not available, skipping QA checks"
+    # Try modern pkgcheck first
+    if command -v pkgcheck >/dev/null 2>&1; then
+        log "Running pkgcheck scan..."
+        if ! pkgcheck scan .; then
+            warn "pkgcheck scan found issues"
+        else
+            log "pkgcheck scan passed"
+        fi
+    # Fall back to repoman for older systems
+    elif command -v repoman >/dev/null 2>&1; then
+        log "Running repoman checks (legacy mode)..."
+        
+        # Run various repoman checks
+        local checks=("scan" "full")
+        
+        for check in "${checks[@]}"; do
+            log "Running repoman $check..."
+            if ! repoman "$check"; then
+                warn "repoman $check found issues"
+            else
+                log "repoman $check passed"
+            fi
+        done
+    else
+        warn "No QA tools available (pkgcheck or repoman). Skipping QA checks."
         return
     fi
-    
-    # Run various repoman checks
-    local checks=(
-        "scan"
-        "full"
-    )
-    
-    for check in "${checks[@]}"; do
-        log "Running repoman $check..."
-        if ! repoman "$check"; then
-            warn "repoman $check found issues"
-        else
-            log "repoman $check passed"
-        fi
-    done
 }
 
 # Main function
 main() {
     local version=""
     local skip_compile=false
-    local skip_repoman=false
+    local skip_qa=false
     local setup_only=false
     
     # Parse arguments
@@ -225,8 +241,8 @@ main() {
                 skip_compile=true
                 shift
                 ;;
-            --skip-repoman)
-                skip_repoman=true
+            --skip-qa|--skip-repoman)
+                skip_qa=true
                 shift
                 ;;
             --setup-only)
@@ -242,7 +258,8 @@ Test OpenCode ebuild functionality and quality.
 OPTIONS:
     -v, --version      Test specific version (default: newest available)
     --skip-compile     Skip compilation test
-    --skip-repoman     Skip repoman QA checks
+    --skip-qa          Skip QA checks (pkgcheck/repoman)
+    --skip-repoman     Alias for --skip-qa (legacy compatibility)
     --setup-only       Only setup overlay, don't run tests
     -h, --help         Show this help
 
@@ -294,9 +311,9 @@ EOF
     # Generate manifest
     generate_manifest
     
-    # Run repoman checks
-    if [[ "$skip_repoman" != "true" ]]; then
-        run_repoman
+    # Run QA checks
+    if [[ "$skip_qa" != "true" ]]; then
+        run_qa_checks
     fi
     
     # Test compilation
