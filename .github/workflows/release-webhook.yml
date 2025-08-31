@@ -1,0 +1,58 @@
+name: OpenCode Release Webhook
+
+on:
+  repository_dispatch:
+    types: [opencode-release-webhook]
+
+jobs:
+  handle-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Extract release information
+      id: release_info
+      run: |
+        echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+        echo "release_url=${{ github.event.client_payload.release_url }}" >> $GITHUB_OUTPUT
+        echo "Release version: ${{ github.event.client_payload.version }}"
+        echo "Release URL: ${{ github.event.client_payload.release_url }}"
+        
+    - name: Trigger version update workflow
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'update-versions.yml',
+            ref: 'main',
+            inputs: {
+              force_update: 'false'
+            }
+          });
+          
+    - name: Comment on success
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Could add notification logic here, like Discord/Slack webhooks
+          console.log(`Successfully triggered update for OpenCode v${{ steps.release_info.outputs.version }}`);
+
+  validate-webhook:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Validate webhook payload
+      run: |
+        if [ -z "${{ github.event.client_payload.version }}" ]; then
+          echo "Error: No version provided in webhook payload"
+          exit 1
+        fi
+        
+        # Basic version format validation
+        if [[ ! "${{ github.event.client_payload.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+          echo "Error: Invalid version format: ${{ github.event.client_payload.version }}"
+          exit 1
+        fi
+        
+        echo "Webhook validation passed for version: ${{ github.event.client_payload.version }}"

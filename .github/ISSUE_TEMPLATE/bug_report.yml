@@ -1,0 +1,73 @@
+name: Bug Report
+description: Report a bug with the OpenCode overlay
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose the issue.
+
+  - type: input
+    id: package-version
+    attributes:
+      label: OpenCode Package Version
+      description: Which version of dev-util/opencode are you trying to use?
+      placeholder: "e.g., 0.5.29, 9999 (live)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Information
+      description: Please provide system information
+      placeholder: |
+        - Gentoo profile: 
+        - Architecture: 
+        - Kernel version: 
+        - Portage version: 
+        - Python version: 
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. emerge -av dev-util/opencode
+        2. ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Build Logs
+      description: If this is a build failure, please include relevant build logs
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here

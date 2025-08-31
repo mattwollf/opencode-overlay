@@ -2,8 +2,8 @@
 <!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer type="person">
-		<email>maintainer@example.com</email>
-		<name>Overlay Maintainer</name>
+		<email>mattwollf@gmail.com</email>
+		<name>mw</name>
 		<description>Primary maintainer</description>
 	</maintainer>
 	

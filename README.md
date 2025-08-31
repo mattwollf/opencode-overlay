@@ -12,14 +12,14 @@ OpenCode is an AI coding agent that provides intelligent code assistance, comple
 
 1. **Using eselect-repository (recommended):**
    ```bash
-   sudo eselect repository add opencode-overlay git https://github.com/yourusername/opencode-overlay.git
+   sudo eselect repository add opencode-overlay git https://github.com/mattwollf/opencode-overlay.git
    sudo emaint sync -r opencode-overlay
    ```
 
 2. **Manual setup:**
    ```bash
    # Clone the overlay
-   git clone https://github.com/yourusername/opencode-overlay.git /var/db/repos/opencode-overlay
+   git clone https://github.com/mattwollf/opencode-overlay.git /var/db/repos/opencode-overlay
    
    # Add to repos.conf
    sudo mkdir -p /etc/portage/repos.conf
@@ -166,7 +166,7 @@ After installation, you may need to configure your AI provider:
 ### Getting Help
 
 - **OpenCode Issues:** https://github.com/sst/opencode/issues
-- **Overlay Issues:** https://github.com/yourusername/opencode-overlay/issues
+- **Overlay Issues:** https://github.com/mattwollf/opencode-overlay/issues
 - **Gentoo Forums:** https://forums.gentoo.org/
 
 ## Contributing
@@ -191,9 +191,9 @@ This overlay is licensed under the GPL-2, in accordance with Gentoo policies. Th
 
 ## Maintainer
 
-- **Name:** Overlay Maintainer
-- **Email:** maintainer@example.com
-- **GitHub:** https://github.com/yourusername/opencode-overlay
+- **Name:** mw
+- **Email:** mattwollf@gmail.com
+- **GitHub:** https://github.com/mattwollf/opencode-overlay
 
 ---
 

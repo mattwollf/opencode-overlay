@@ -1,0 +1,158 @@
+name: Test Ebuilds
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate-ebuilds:
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Update Portage
+      run: |
+        emerge --sync
+        emerge -u portage
+        
+    - name: Install development tools
+      run: |
+        emerge -nq dev-util/pkgcheck
+        emerge -nq app-portage/repoman
+        emerge -nq dev-vcs/git
+        
+    - name: Setup overlay
+      run: |
+        mkdir -p /var/db/repos/opencode-overlay
+        cp -r * /var/db/repos/opencode-overlay/
+        
+        # Configure overlay
+        mkdir -p /etc/portage/repos.conf
+        cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
+        [opencode-overlay]
+        location = /var/db/repos/opencode-overlay
+        masters = gentoo
+        priority = 50
+        auto-sync = no
+        EOF
+        
+    - name: Validate ebuild syntax
+      run: |
+        cd /var/db/repos/opencode-overlay/dev-util/opencode
+        for ebuild in *.ebuild; do
+          echo "Validating $ebuild..."
+          ebuild "$ebuild" clean || exit 1
+        done
+        
+    - name: Run pkgcheck
+      run: |
+        cd /var/db/repos/opencode-overlay
+        pkgcheck scan --exit dev-util/opencode || true
+        
+    - name: Run repoman checks
+      run: |
+        cd /var/db/repos/opencode-overlay/dev-util/opencode
+        repoman manifest || exit 1
+        repoman scan || true
+        
+    - name: Test manifest generation
+      run: |
+        cd /var/db/repos/opencode-overlay/dev-util/opencode
+        rm -f Manifest
+        repoman manifest
+        [ -f Manifest ] || exit 1
+
+  build-test:
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:latest
+    needs: validate-ebuilds
+    strategy:
+      matrix:
+        version: ["0.5.29"]
+        
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Update Portage and install dependencies
+      run: |
+        emerge --sync
+        emerge -u portage
+        
+        # Install build dependencies
+        emerge -nq dev-lang/go
+        emerge -nq sys-apps/bun
+        
+    - name: Setup overlay
+      run: |
+        mkdir -p /var/db/repos/opencode-overlay
+        cp -r * /var/db/repos/opencode-overlay/
+        
+        mkdir -p /etc/portage/repos.conf
+        cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
+        [opencode-overlay]
+        location = /var/db/repos/opencode-overlay
+        masters = gentoo
+        priority = 50
+        auto-sync = no
+        EOF
+        
+    - name: Install runtime dependencies
+      run: |
+        emerge -nq sys-apps/fzf
+        emerge -nq sys-apps/ripgrep
+        
+    - name: Test ebuild pretend
+      run: |
+        emerge --pretend =dev-util/opencode-${{ matrix.version }}
+        
+    - name: Test ebuild fetch
+      run: |
+        ebuild /var/db/repos/opencode-overlay/dev-util/opencode/opencode-${{ matrix.version }}.ebuild fetch
+        
+    - name: Test ebuild compile (without install)
+      run: |
+        ebuild /var/db/repos/opencode-overlay/dev-util/opencode/opencode-${{ matrix.version }}.ebuild compile
+        
+  live-ebuild-test:
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:latest
+    needs: validate-ebuilds
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup and test live ebuild
+      run: |
+        emerge --sync
+        emerge -u portage
+        emerge -nq dev-lang/go sys-apps/bun
+        
+        mkdir -p /var/db/repos/opencode-overlay
+        cp -r * /var/db/repos/opencode-overlay/
+        
+        mkdir -p /etc/portage/repos.conf
+        cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
+        [opencode-overlay]
+        location = /var/db/repos/opencode-overlay
+        masters = gentoo
+        priority = 50
+        auto-sync = no
+        EOF
+        
+        # Test live ebuild syntax
+        cd /var/db/repos/opencode-overlay/dev-util/opencode
+        ebuild opencode-9999.ebuild clean
+        
+        # Test pretend (this will check dependencies)
+        emerge --pretend =dev-util/opencode-9999

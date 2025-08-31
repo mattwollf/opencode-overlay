@@ -1,0 +1,119 @@
+name: Auto-Update OpenCode Versions
+
+on:
+  schedule:
+    # Check for new versions daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update even if version exists'
+        required: false
+        default: 'false'
+        type: boolean
+  repository_dispatch:
+    types: [opencode-release]
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+        
+    - name: Setup git
+      run: |
+        git config --global user.name "OpenCode Bot"
+        git config --global user.email "bot@opencode-overlay.example.com"
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl jq
+        
+    - name: Check for new versions
+      id: check_version
+      run: |
+        # Get latest release from GitHub API
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/sst/opencode/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+        echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+        echo "Latest version: ${LATEST_VERSION}"
+        
+        # Check if ebuild already exists
+        if [ -f "dev-util/opencode/opencode-${LATEST_VERSION}.ebuild" ] && [ "${{ inputs.force_update }}" != "true" ]; then
+          echo "Ebuild for version ${LATEST_VERSION} already exists"
+          echo "needs_update=false" >> $GITHUB_OUTPUT
+        else
+          echo "needs_update=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Update ebuild
+      if: steps.check_version.outputs.needs_update == 'true'
+      run: |
+        # Make update script executable
+        chmod +x scripts/update-ebuild.sh
+        
+        # Run update script
+        FORCE_FLAG=""
+        if [ "${{ inputs.force_update }}" == "true" ]; then
+          FORCE_FLAG="--force"
+        fi
+        
+        ./scripts/update-ebuild.sh --skip-git -v ${{ steps.check_version.outputs.latest_version }} ${FORCE_FLAG}
+        
+    - name: Create Pull Request
+      if: steps.check_version.outputs.needs_update == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "dev-util/opencode: bump to ${{ steps.check_version.outputs.latest_version }}"
+        title: "Update OpenCode to v${{ steps.check_version.outputs.latest_version }}"
+        body: |
+          ## OpenCode Version Update
+          
+          This PR updates OpenCode to version `${{ steps.check_version.outputs.latest_version }}`.
+          
+          ### Changes:
+          - Created `opencode-${{ steps.check_version.outputs.latest_version }}.ebuild`
+          - Updated Manifest file
+          
+          ### Automatic Checks:
+          - [ ] Ebuild syntax validation
+          - [ ] Build test
+          - [ ] QA checks
+          
+          This PR was created automatically by the version update workflow.
+          
+          **Release Notes:** https://github.com/sst/opencode/releases/tag/v${{ steps.check_version.outputs.latest_version }}
+        branch: update-opencode-${{ steps.check_version.outputs.latest_version }}
+        delete-branch: true
+        labels: |
+          automated
+          version-update
+          dev-util/opencode
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: check-and-update
+    if: failure()
+    
+    steps:
+    - name: Create Issue on Failure
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Automated version update failed',
+            body: `The automated version update workflow failed.
+            
+            **Workflow Run:** https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+            
+            Please check the logs and fix any issues.`,
+            labels: ['bug', 'automation', 'needs-attention']
+          })
