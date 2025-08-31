@@ -109,6 +109,20 @@ generate_manifest() {
     
     cd "$PACKAGE_DIR" || die "Cannot change to package directory"
     
+    # Detect CI environment and prefer ebuild directly
+    if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        log "CI environment detected, using ebuild directly"
+        local newest_ebuild
+        newest_ebuild=$(ls opencode-*.ebuild | grep -v 9999 | sort -V | tail -n1)
+        
+        if [[ -n "$newest_ebuild" ]]; then
+            ebuild "$newest_ebuild" manifest || warn "ebuild manifest failed"
+        else
+            warn "No suitable ebuild found for manifest generation"
+        fi
+        return
+    fi
+    
     # Use modern pkgdev, fallback to ebuild, legacy repoman
     if command -v pkgdev >/dev/null 2>&1; then
         pkgdev manifest || warn "pkgdev manifest failed, trying alternative method"

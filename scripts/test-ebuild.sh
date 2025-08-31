@@ -130,6 +130,22 @@ generate_manifest() {
     
     cd "$PACKAGE_DIR" || die "Cannot access package directory"
     
+    # Detect CI environment and prefer ebuild directly
+    if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        log "CI environment detected, using ebuild directly"
+        local newest_ebuild
+        newest_ebuild=$(ls opencode-*.ebuild | grep -v 9999 | sort -V | tail -n1 || true)
+        
+        if [[ -n "$newest_ebuild" ]]; then
+            ebuild "$newest_ebuild" manifest || die "Manifest generation failed"
+        else
+            die "No non-live ebuilds found for manifest generation"
+        fi
+        
+        log "Manifest generation completed"
+        return
+    fi
+    
     # Try modern tools first, then fallback to older methods
     if command -v pkgdev >/dev/null 2>&1; then
         pkgdev manifest || die "Manifest generation failed"

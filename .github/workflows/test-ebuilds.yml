@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: gentoo/stage3:latest
+    env:
+      CI: true
+      GITHUB_ACTIONS: true
     
     steps:
     - name: Checkout repository
@@ -28,13 +31,25 @@ jobs:
         emerge -nq dev-util/pkgdev
         emerge -nq dev-vcs/git
         
-    - name: Setup overlay
+    - name: Setup repositories
       run: |
         mkdir -p /var/db/repos/opencode-overlay
         cp -r * /var/db/repos/opencode-overlay/
         
-        # Configure overlay
+        # Configure repositories
         mkdir -p /etc/portage/repos.conf
+        
+        # Configure main gentoo repository
+        cat > /etc/portage/repos.conf/gentoo.conf <<EOF
+        [gentoo]
+        location = /var/db/repos/gentoo
+        sync-type = rsync
+        sync-uri = rsync://rsync.gentoo.org/gentoo-portage
+        auto-sync = yes
+        priority = -1000
+        EOF
+        
+        # Configure overlay
         cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
         [opencode-overlay]
         location = /var/db/repos/opencode-overlay
@@ -59,20 +74,25 @@ jobs:
     - name: Run pkgcheck QA checks
       run: |
         cd /var/db/repos/opencode-overlay/dev-util/opencode
-        pkgdev manifest || exit 1
+        # Use ebuild directly in CI to avoid repo config issues
+        ebuild opencode-*.ebuild manifest || exit 1
         pkgcheck scan || true
         
     - name: Test manifest generation
       run: |
         cd /var/db/repos/opencode-overlay/dev-util/opencode
         rm -f Manifest
-        pkgdev manifest || ebuild opencode-*.ebuild manifest
+        # Use ebuild directly in CI environment
+        ebuild opencode-*.ebuild manifest
         [ -f Manifest ] || exit 1
 
   build-test:
     runs-on: ubuntu-latest
     container:
       image: gentoo/stage3:latest
+    env:
+      CI: true
+      GITHUB_ACTIONS: true
     needs: validate-ebuilds
     strategy:
       matrix:
@@ -91,12 +111,25 @@ jobs:
         emerge -nq dev-lang/go
         emerge -nq sys-apps/bun
         
-    - name: Setup overlay
+    - name: Setup repositories
       run: |
         mkdir -p /var/db/repos/opencode-overlay
         cp -r * /var/db/repos/opencode-overlay/
         
+        # Configure repositories  
         mkdir -p /etc/portage/repos.conf
+        
+        # Configure main gentoo repository
+        cat > /etc/portage/repos.conf/gentoo.conf <<EOF
+        [gentoo]
+        location = /var/db/repos/gentoo
+        sync-type = rsync
+        sync-uri = rsync://rsync.gentoo.org/gentoo-portage
+        auto-sync = yes
+        priority = -1000
+        EOF
+        
+        # Configure overlay
         cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
         [opencode-overlay]
         location = /var/db/repos/opencode-overlay
@@ -126,6 +159,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: gentoo/stage3:latest
+    env:
+      CI: true
+      GITHUB_ACTIONS: true
     needs: validate-ebuilds
     
     steps:
@@ -141,7 +177,20 @@ jobs:
         mkdir -p /var/db/repos/opencode-overlay
         cp -r * /var/db/repos/opencode-overlay/
         
+        # Configure repositories
         mkdir -p /etc/portage/repos.conf
+        
+        # Configure main gentoo repository
+        cat > /etc/portage/repos.conf/gentoo.conf <<EOF
+        [gentoo]
+        location = /var/db/repos/gentoo
+        sync-type = rsync
+        sync-uri = rsync://rsync.gentoo.org/gentoo-portage
+        auto-sync = yes
+        priority = -1000
+        EOF
+        
+        # Configure overlay
         cat > /etc/portage/repos.conf/opencode-overlay.conf <<EOF
         [opencode-overlay]
         location = /var/db/repos/opencode-overlay
