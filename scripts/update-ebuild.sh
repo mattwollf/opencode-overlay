@@ -11,19 +11,27 @@ OVERLAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="${OVERLAY_DIR}/dev-util/opencode"
 GITHUB_API="https://api.github.com/repos/${GITHUB_REPO}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Colors for output (disabled in non-TTY environments)
+if [[ -t 1 ]] && [[ "${NO_COLOR:-}" != "1" ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    NC=''
+fi
 
 log() {
-    echo -e "${GREEN}[INFO]${NC} $*"
+    echo -e "${GREEN}[INFO]${NC} $*" >&2
 }
 
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $*"
+    echo -e "${YELLOW}[WARN]${NC} $*" >&2
 }
 
 error() {
@@ -124,20 +132,33 @@ update_git() {
     
     cd "$OVERLAY_DIR" || die "Cannot change to overlay directory"
     
-    if ! git status >/dev/null 2>&1; then
+    # Check if this is a git repository
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
         warn "Not a git repository, skipping git operations"
         return
     fi
     
     log "Updating git repository..."
     
-    git add "dev-util/opencode/" || warn "git add failed"
+    # Add files to staging area
+    if ! git add "dev-util/opencode/" >/dev/null 2>&1; then
+        warn "git add failed"
+        return
+    fi
     
+    # Check if there are changes to commit
     if git diff --cached --quiet; then
         log "No changes to commit"
+        return
+    fi
+    
+    # Commit the changes
+    log "Committing changes..."
+    if git commit -m "$message" >/dev/null 2>&1; then
+        log "Successfully committed: $message"
     else
-        git commit -m "$message" || warn "git commit failed"
-        log "Committed changes: $message"
+        warn "git commit failed"
+        return
     fi
 }
 
@@ -158,6 +179,16 @@ main() {
                 skip_git=true
                 shift
                 ;;
+            --no-color)
+                NO_COLOR=1
+                # Reset color variables
+                RED=''
+                GREEN=''
+                YELLOW=''
+                BLUE=''
+                NC=''
+                shift
+                ;;
             -v|--version)
                 version="$2"
                 shift 2
@@ -172,12 +203,14 @@ OPTIONS:
     -f, --force      Force update even if ebuild exists
     -v, --version    Specify version instead of auto-detecting
     --skip-git       Skip git operations
+    --no-color       Disable colored output
     -h, --help       Show this help
 
 EXAMPLES:
     $0                    # Update to latest GitHub release
     $0 -v 0.6.0          # Update to specific version
     $0 -f                # Force update even if ebuild exists
+    $0 --no-color        # Run without colored output (for CI)
 EOF
                 exit 0
                 ;;

@@ -63,7 +63,7 @@ jobs:
           FORCE_FLAG="--force"
         fi
         
-        ./scripts/update-ebuild.sh --skip-git -v ${{ steps.check_version.outputs.latest_version }} ${FORCE_FLAG}
+        ./scripts/update-ebuild.sh --skip-git --no-color -v ${{ steps.check_version.outputs.latest_version }} ${FORCE_FLAG}
         
     - name: Create Pull Request
       if: steps.check_version.outputs.needs_update == 'true'
