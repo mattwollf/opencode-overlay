@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>maintainer@example.com</email>
+		<name>Overlay Maintainer</name>
+		<description>Primary maintainer</description>
+	</maintainer>
+	
+	<longdescription lang="en">
+		OpenCode is an AI-powered coding agent designed specifically for terminal-based development workflows. 
+		Built by the creators of SST, it provides intelligent code assistance, completion, and generation 
+		capabilities directly in your terminal environment.
+
+		Key features:
+		- AI-powered code generation and completion
+		- Terminal-based user interface (TUI)
+		- Support for multiple AI providers (Anthropic Claude, OpenAI, etc.)
+		- Client/server architecture for flexible deployment
+		- Integration with popular development tools (fzf, ripgrep)
+		- Provider-agnostic design for maximum compatibility
+
+		OpenCode combines the power of modern language models with a native terminal experience, 
+		making it ideal for developers who prefer command-line workflows. Unlike web-based alternatives, 
+		OpenCode runs entirely on your machine and can work with local or remote AI providers.
+	</longdescription>
+
+	<use>
+		<flag name="test">Run package test suite during build</flag>
+	</use>
+
+	<upstream>
+		<remote-id type="github">sst/opencode</remote-id>
+		<bugs-to>https://github.com/sst/opencode/issues</bugs-to>
+		<changelog>https://github.com/sst/opencode/releases</changelog>
+		<doc>https://opencode.ai/docs</doc>
+	</upstream>
+</pkgmetadata>
