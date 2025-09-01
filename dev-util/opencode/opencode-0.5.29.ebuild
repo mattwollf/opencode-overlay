@@ -24,7 +24,6 @@ RESTRICT="!test? ( test )"
 # Build dependencies
 BDEPEND="
 	>=dev-lang/go-1.24
-	sys-apps/bun
 "
 
 # Runtime dependencies  
@@ -45,10 +44,11 @@ pkg_pretend() {
 		die "Please emerge >=dev-lang/go-1.24"
 	fi
 	
-	# Check for Bun
-	if ! has_version "sys-apps/bun"; then
+	# Check for Bun in PATH
+	if ! command -v bun >/dev/null 2>&1; then
 		eerror "OpenCode requires Bun runtime for building"
-		die "Please emerge sys-apps/bun"
+		eerror "Please install bun from https://bun.sh"
+		die "bun not found in PATH"
 	fi
 }
 

@@ -120,7 +120,10 @@ jobs:
         
         # Install build dependencies
         emerge -nq dev-lang/go
-        emerge -nq sys-apps/bun
+        
+        # Install bun since it's not available in Gentoo repos
+        curl -fsSL https://bun.sh/install | bash
+        echo "$HOME/.bun/bin" >> $GITHUB_PATH
         
     - name: Setup repositories
       run: |
@@ -183,7 +186,11 @@ jobs:
       run: |
         emerge --sync
         emerge -u portage
-        emerge -nq dev-lang/go sys-apps/bun
+        emerge -nq dev-lang/go
+        
+        # Install bun since it's not available in Gentoo repos
+        curl -fsSL https://bun.sh/install | bash
+        echo "$HOME/.bun/bin" >> $GITHUB_PATH
         
         mkdir -p /var/db/repos/opencode-overlay
         cp -r * /var/db/repos/opencode-overlay/
