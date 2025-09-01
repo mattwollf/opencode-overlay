@@ -17,6 +17,7 @@ RESTRICT="!test? ( test )"
 # Build dependencies
 BDEPEND="
 	>=dev-lang/go-1.24
+	net-libs/nodejs[npm]
 "
 
 # Runtime dependencies  
@@ -37,11 +38,21 @@ pkg_pretend() {
 		die "Please emerge >=dev-lang/go-1.24"
 	fi
 	
-	# Check for Bun in PATH
-	if ! command -v bun >/dev/null 2>&1; then
-		eerror "OpenCode requires Bun runtime for building"
-		eerror "Please install bun from https://bun.sh"
-		die "bun not found in PATH"
+	# Check for Node.js and npm
+	if ! has_version "net-libs/nodejs"; then
+		eerror "OpenCode requires Node.js runtime for building"
+		die "Please emerge net-libs/nodejs"
+	fi
+	
+	if ! command -v node >/dev/null 2>&1; then
+		eerror "Node.js runtime not found in PATH"
+		die "node not found in PATH"
+	fi
+	
+	if ! command -v npm >/dev/null 2>&1; then
+		eerror "npm package manager not found in PATH"
+		eerror "Please ensure net-libs/nodejs was built with npm USE flag"
+		die "npm not found in PATH"
 	fi
 }
 
@@ -77,7 +88,7 @@ src_compile() {
 	local build_version="${OPENCODE_BUILD_VERSION:-9999}"
 	
 	einfo "Installing Node.js dependencies..."
-	bun install || die "Failed to install dependencies"
+	npm install || die "Failed to install dependencies"
 	
 	# Build the Go TUI component
 	einfo "Building Go TUI component..."
@@ -86,22 +97,30 @@ src_compile() {
 	local go_ldflags="-s -w -X main.Version=${build_version}"
 	ego build -ldflags="${go_ldflags}" -o tui cmd/opencode/main.go
 	
-	# Build the main Node.js binary with Bun
-	einfo "Building main binary with Bun..."
+	# Build the main Node.js binary with npm
+	einfo "Building main binary with npm..."
 	cd ../opencode || die "Cannot change to packages/opencode directory"
 	
-	# Define build-time constants
-	local tui_path="$(realpath ../tui/tui)"
-	local build_args=(
-		--define "OPENCODE_TUI_PATH='${tui_path}'"
-		--define "OPENCODE_VERSION='${build_version}'"
-		--compile
-		--target=bun-linux-x64
-		--outfile=opencode
-		./src/index.ts
-	)
+	# Install TypeScript and build dependencies locally if needed
+	npm install --save-dev typescript ts-node @types/node || die "Failed to install build dependencies"
 	
-	bun build "${build_args[@]}" || die "Failed to build main binary"
+	# Define build-time constants and create a build script
+	local tui_path="$(realpath ../tui/tui)"
+	export OPENCODE_TUI_PATH="${tui_path}"
+	export OPENCODE_VERSION="${build_version}"
+	
+	# Use Node.js with TypeScript to build the binary
+	einfo "Compiling TypeScript to JavaScript..."
+	npx tsc --build || die "TypeScript compilation failed"
+	
+	# Create executable wrapper script for the compiled code
+	cat > opencode << EOF
+#!/usr/bin/env node
+process.env.OPENCODE_TUI_PATH = '${tui_path}';
+process.env.OPENCODE_VERSION = '${build_version}';
+require('./dist/index.js');
+EOF
+	chmod +x opencode || die "Failed to make binary executable"
 	
 	einfo "Build completed successfully"
 }
