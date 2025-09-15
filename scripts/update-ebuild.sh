@@ -85,7 +85,7 @@ ebuild_exists() {
 # Create new ebuild from template
 create_ebuild() {
     local version="$1"
-    local template="${PACKAGE_DIR}/opencode-0.5.29.ebuild"
+    local template="${PACKAGE_DIR}/opencode-0.9.0.ebuild"
     local new_ebuild="${PACKAGE_DIR}/opencode-${version}.ebuild"
     
     if [[ ! -f "$template" ]]; then
@@ -109,17 +109,10 @@ generate_manifest() {
     
     cd "$PACKAGE_DIR" || die "Cannot change to package directory"
     
-    # Detect CI environment and prefer ebuild directly
+    # Detect CI environment and skip manifest generation (ebuild not available)
     if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-        log "CI environment detected, using ebuild directly"
-        local newest_ebuild
-        newest_ebuild=$(ls opencode-*.ebuild | grep -v 9999 | sort -V | tail -n1)
-        
-        if [[ -n "$newest_ebuild" ]]; then
-            ebuild "$newest_ebuild" manifest || warn "ebuild manifest failed"
-        else
-            warn "No suitable ebuild found for manifest generation"
-        fi
+        log "CI environment detected, skipping manifest generation"
+        log "Manifest will need to be generated manually after PR is merged"
         return
     fi
     
