@@ -35,8 +35,11 @@ OpenCode is an AI coding agent that provides intelligent code assistance, comple
 ### Installing OpenCode
 
 ```bash
-# Install the latest stable version
+# Install the latest stable version (builds from source)
 sudo emerge -av dev-util/opencode
+
+# Or install the binary version (faster, pre-built)
+sudo emerge -av dev-util/opencode-bin
 
 # Or install the live version for development
 sudo emerge -av =dev-util/opencode-9999
@@ -46,7 +49,7 @@ sudo emerge -av =dev-util/opencode-9999
 
 - **Category:** dev-util
 - **Package:** opencode
-- **Versions:** 0.5.29 (and live 9999)
+- **Versions:** 0.9.0, 0.5.29 (and live 9999)
 - **Homepage:** https://opencode.ai
 - **Repository:** https://github.com/sst/opencode
 
@@ -144,13 +147,36 @@ After installation, you may need to configure your AI provider:
 2. **Configuration:** Check `~/.opencode/` for configuration files
 3. **Documentation:** Visit https://opencode.ai/docs for detailed setup
 
+## Automated Updates
+
+This overlay features **automated version updates** similar to Dependabot:
+
+### How It Works
+- **Daily checks** at 6 AM UTC for new OpenCode releases
+- **Automatic PR creation** when new versions are detected
+- **GitHub Actions testing** validates ebuilds before merge
+- **Manual trigger** available via workflow dispatch
+
+### Current Status
+- ✅ **Latest Version:** 0.9.0 (auto-updated from 0.5.29)
+- ✅ **Automated Detection:** Working
+- ✅ **PR Generation:** Working
+- ✅ **CI Testing:** Functional
+
+### Available Packages
+- **`dev-util/opencode`** - Source package (builds from source)
+- **`dev-util/opencode-bin`** - Binary package (uses pre-built releases)
+- **`dev-util/opencode-9999`** - Live package (latest git main)
+
+All packages are automatically updated when new versions are released.
+
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Bun not found:**
+1. **Node.js not found:**
    ```bash
-   sudo emerge -av sys-apps/bun
+   sudo emerge -av net-libs/nodejs
    ```
 
 2. **Go version too old:**
