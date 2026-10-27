@@ -38,31 +38,6 @@ DEPEND="${RDEPEND}"
 # Go module dependencies will be vendored
 QA_FLAGS_IGNORED="usr/bin/opencode"
 
-pkg_pretend() {
-	# Check for minimum Go version
-	if ! has_version ">=dev-lang/go-1.24"; then
-		eerror "OpenCode requires Go 1.24 or later"
-		die "Please emerge >=dev-lang/go-1.24"
-	fi
-	
-	# Check for Node.js and npm
-	if ! has_version "net-libs/nodejs"; then
-		eerror "OpenCode requires Node.js runtime for building"
-		die "Please emerge net-libs/nodejs"
-	fi
-	
-	if ! command -v node >/dev/null 2>&1; then
-		eerror "Node.js runtime not found in PATH"
-		die "node not found in PATH"
-	fi
-	
-	if ! command -v npm >/dev/null 2>&1; then
-		eerror "npm package manager not found in PATH"
-		eerror "Please ensure net-libs/nodejs was built with npm USE flag"
-		die "npm not found in PATH"
-	fi
-}
-
 src_unpack() {
 	if [[ ${PV} == *9999 ]]; then
 		git-r3_src_unpack
